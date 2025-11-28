@@ -1,3 +1,4 @@
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -12,6 +13,9 @@ public class Main {
                 System.out.print("$ ");
                 String input = scanner.nextLine();
                 commandHandler.handleCommand(input);
+                // this path search is for the type command and needs to be handle this casees as well along with the current type check
+                // and so the type command handles this with the inbuilt commands and check the directories as well to find the file and is it executable or not asa per the directories in the path list. 
+                // should handle all the edge cases of invalid path, non executable files to handle all this gracefully. 
             }
         }
     }
@@ -67,10 +71,33 @@ class TypeCommand implements Command {
         BUILTIN_COMMANDS.add("type");
     }
 
+    // need to add path search logic for valid or invalid commands and handle the edge cases gracefully.
+    String path = System.getenv("PATH");
+    String[] dirs = path == null ? new String[0] : path.split(File.pathSeparator);
+
+
     @Override
     public void execute(String arguments) {
         if (BUILTIN_COMMANDS.contains(arguments)) {
             System.out.println(arguments + " is a shell builtin");
+        } else if (dirs.length > 0) {
+            // Logic to check if the command exists in any of the directories in PATH
+            boolean found = false;
+            // System.out.println("path dirs length: " + dirs.length);
+            // System.out.println("path name: " + path);
+            for (String dir : dirs) {
+                // print debug for dir 
+                // System.out.println("Checking directory: " + dir);
+                File file = new File(dir, arguments);
+                if (file.exists() && file.canExecute()) {
+                    System.out.println(arguments + " is " + file);
+                    found = true;
+                    break;
+                }
+            }            
+            if (!found) {
+                System.out.println(arguments + ": not found");
+            }
         } else {
             System.out.println(arguments + ": not found");
         }
