@@ -12,6 +12,11 @@ public class Main {
             while (true) {
                 System.out.print("$ ");
                 String input = scanner.nextLine();
+                // if builtin exists, execute them.
+                // else search these external commands in the path dirs.
+                // need to find the these and find these if they are executables or now
+                // and if they are they need to be executed with all the arguments given, this can be a list of arguments.
+                // handle the edge cases gracefully. 
                 commandHandler.handleCommand(input);
                 // this path search is for the type command and needs to be handle this casees as well along with the current type check
                 // and so the type command handles this with the inbuilt commands and check the directories as well to find the file and is it executable or not asa per the directories in the path list. 
@@ -40,14 +45,59 @@ class CommandHandler {
         String arguments = parts.length > 1 ? parts[1] : "";
 
         Command command = commands.get(commandName);
-        if (command != null) {
+        if (command != null) { // default builtin command handling 
             command.execute(arguments);
+        } else if (command == null && !commandName.isEmpty()) {
+            // external command search & executable with arguments
+            String path = System.getenv("PATH");
+            String[] dirs = path == null ? new String[0] : path.split(File.pathSeparator);
+            // commandName
+            // arguments list []
+            // find commandName in dirs and execute with arguments if found
+            String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
+            boolean found = false;
+            for (String dir : dirs) {
+                File file = new File(dir, commandName);
+                if (file.exists() && file.canExecute()) {
+                    try {
+                        // Build command with arguments
+                        String[] cmdArray = new String[argList.length + 1];
+                        cmdArray[0] = file.getAbsolutePath();
+                        System.arraycopy(argList, 0, cmdArray, 1, argList.length);
+
+                        ProcessBuilder pb = new ProcessBuilder(cmdArray);
+                        Process process = pb.start();
+
+                        // Print output
+                        try (Scanner outputScanner = new Scanner(process.getInputStream())) {
+                            while (outputScanner.hasNextLine()) {
+                                System.out.println(outputScanner.nextLine());
+                            }
+                        }
+
+                        int exitCode = process.waitFor();
+                        // Optionally print exit code
+                        // System.out.println("Process exited with code: " + exitCode);
+                    } catch (Exception e) {
+                        System.out.println("Error executing command: " + e.getMessage());
+                    }
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                System.out.println(commandName + ": command not found");
+            }
         } else {
             System.out.println(commandName + ": command not found");
         }
     }
 }
 
+
+
+        
+        
 class EchoCommand implements Command {
     @Override
     public void execute(String arguments) {
