@@ -65,7 +65,7 @@ class CommandHandler {
             if (file.exists() && file.canExecute()) {
                 try {
                     String[] cmdArray = new String[argList.length + 1];
-                    cmdArray[0] = file.getAbsolutePath();
+                    cmdArray[0] = commandName;
                     System.arraycopy(argList, 0, cmdArray, 1, argList.length);
 
                     ProcessBuilder pb = new ProcessBuilder(cmdArray);
