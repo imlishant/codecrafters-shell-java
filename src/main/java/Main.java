@@ -47,10 +47,10 @@ class CommandHandler {
         Command command = commands.get(commandName);
         if (command != null) { // default builtin command handling 
             command.execute(arguments);
-            System.out.println("builtin command executed: " + commandName);
+            System.err.println("builtin command executed: " + commandName);
         } else if (command == null && !commandName.isEmpty()) {
             // external command search & executable with arguments
-            System.out.println("searching external command: " + commandName);
+            System.err.println("searching external command: " + commandName);
             String path = System.getenv("PATH");
             String[] dirs = path == null ? new String[0] : path.split(File.pathSeparator);
             // commandName
@@ -60,18 +60,18 @@ class CommandHandler {
             boolean found = false;
             for (String dir : dirs) {
                 File file = new File(dir, commandName);
-                System.out.println("checking file: " + file);
+                System.err.println("checking file: " + file);
                 if (file.exists() && file.canExecute()) {
                     try {
                         // Build command with arguments
                         String[] cmdArray = new String[argList.length + 1];
                         // cmdArray[0] = file.getAbsolutePath();
                         cmdArray[0] = commandName;
-                        System.out.println("absolute path: " + file.getAbsolutePath());
-                        System.out.println("cmd name:  " + file);
+                        System.err.println("absolute path: " + file.getAbsolutePath());
+                        System.err.println("cmd name:  " + file);
                         System.arraycopy(argList, 0, cmdArray, 1, argList.length);
 
-                        System.out.println("cmdArray print: " + String.join(" ", cmdArray));
+                        System.err.println("cmdArray print: " + String.join(" ", cmdArray));
 
                         ProcessBuilder pb = new ProcessBuilder(cmdArray);
                         Process process = pb.start();
