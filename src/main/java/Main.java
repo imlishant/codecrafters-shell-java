@@ -43,60 +43,53 @@ class CommandHandler {
         String[] parts = input.split(" ", 2);
         String commandName = parts[0];
         String arguments = parts.length > 1 ? parts[1] : "";
+        String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
 
         Command command = commands.get(commandName);
-        if (command != null) { // default builtin command handling 
+        if (command != null) {
             command.execute(arguments);
-            // System.err.println("builtin command executed: " + commandName);
-        } else if (command == null && !commandName.isEmpty()) {
-            // external command search & executable with arguments
-            // System.err.println("searching external command: " + commandName);
-            String path = System.getenv("PATH");
-            String[] dirs = path == null ? new String[0] : path.split(File.pathSeparator);
-            // commandName
-            // arguments list []
-            // find commandName in dirs and execute with arguments if found
-            String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
-            boolean found = false;
-            for (String dir : dirs) {
-                File file = new File(dir, commandName);
-                // System.err.println("checking file: " + file);
-                if (file.exists() && file.canExecute()) {
-                    try {
-                        // Build command with arguments
-                        String[] cmdArray = new String[argList.length + 1];
-                        // cmdArray[0] = file.getAbsolutePath();
-                        cmdArray[0] = commandName;
-                        // System.err.println("absolute path: " + file.getAbsolutePath());
-                        // System.err.println("cmd name:  " + file);
-                        System.arraycopy(argList, 0, cmdArray, 1, argList.length);
-
-                        // System.err.println("cmdArray print: " + String.join(" ", cmdArray));
-
-                        ProcessBuilder pb = new ProcessBuilder(cmdArray);
-                        Process process = pb.start();
-
-                        // Print output
-                        try (Scanner outputScanner = new Scanner(process.getInputStream())) {
-                            while (outputScanner.hasNextLine()) {
-                                System.out.println(outputScanner.nextLine());
-                            }
-                        }
-
-                        int exitCode = process.waitFor();
-                        // Optionally print exit code
-                        // System.out.println("Process exited with code: " + exitCode);
-                    } catch (Exception e) {
-                        System.out.println("Error executing command: " + e.getMessage());
-                    }
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                System.out.println(commandName + ": command not found");
-            }
+        } else if (!commandName.isEmpty()) {
+            executeExternalCommand(commandName, argList);
         } else {
+            System.out.println(commandName + ": command not found");
+        }
+    }
+
+    private void executeExternalCommand(String commandName, String[] argList) {
+        String path = System.getenv("PATH");
+        String[] dirs = path == null ? new String[0] : path.split(File.pathSeparator);
+        boolean found = false;
+
+        for (String dir : dirs) {
+            File file = new File(dir, commandName);
+            if (file.exists() && file.canExecute()) {
+                try {
+                    String[] cmdArray = new String[argList.length + 1];
+                    cmdArray[0] = file.getAbsolutePath();
+                    System.arraycopy(argList, 0, cmdArray, 1, argList.length);
+
+                    ProcessBuilder pb = new ProcessBuilder(cmdArray);
+                    Process process = pb.start();
+
+                    try (Scanner outputScanner = new Scanner(process.getInputStream())) {
+                        while (outputScanner.hasNextLine()) {
+                            System.out.println(outputScanner.nextLine());
+                        }
+                    }
+
+                    int exitCode = process.waitFor();
+                    if (exitCode != 0) {
+                        System.err.println("Command exited with code: " + exitCode);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error executing command: " + e.getMessage());
+                }
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
             System.out.println(commandName + ": command not found");
         }
     }
