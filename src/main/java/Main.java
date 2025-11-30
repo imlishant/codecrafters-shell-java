@@ -241,6 +241,7 @@ class CdCommand implements Command {
             target = target.getCanonicalFile();
         } catch (IOException ignored) { /* fallback to original */ }
 
+        // these are later stages tasks
         if (!target.exists()) {
             System.out.println("cd: " + targetRaw + ": No such file or directory");
             return;
