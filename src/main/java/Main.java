@@ -83,7 +83,7 @@ class ExternalCommandExecutor {
                 direct = new File(shellState.getCurrentDirectory(), commandName);
             }
             if (direct.exists() && direct.canExecute() && direct.isFile()) {
-                runProcess(direct.getAbsolutePath(), argList, shellState);
+                runProcess(commandName,direct.getAbsolutePath(), argList, shellState);
                 return;
             } else {
                 System.out.println(commandName + ": command not found");
@@ -98,13 +98,14 @@ class ExternalCommandExecutor {
         }
 
         File executable = executableFiles.get(0); // Use the first found executable
-        runProcess(executable.getAbsolutePath(), argList, shellState);
+        runProcess(commandName, executable.getAbsolutePath(), argList, shellState);
     }
 
-    private void runProcess(String executablePath, String[] argList, ShellState shellState) {
+    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState) {
         try {
             List<String> commandWithArgs = new ArrayList<>(1 + argList.length);
             commandWithArgs.add(executablePath); // absolute path prevents ambiguity
+            commandWithArgs.add(commandName);
             for (String a : argList) {
                 if (!a.isEmpty()) commandWithArgs.add(a);
             }
