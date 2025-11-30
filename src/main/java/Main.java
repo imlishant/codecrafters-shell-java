@@ -3,9 +3,16 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
+        // System.out.println("curr dir: " + System.getProperty("user.dir"));
+        // System.out.println("curr abs path: " + new File(".").getAbsolutePath());
         CommandHandler commandHandler = new CommandHandler();
         try (Scanner scanner = new Scanner(System.in)) {
             while (true) {
+
+                // System.out.println("curr dir: " + System.getProperty("user.dir"));
+                // System.out.println("curr abs path: " + new File(".").getAbsolutePath());
+                // System.out.println("curr abs canonical path: " + new File(".").getCanonicalPath());
+
                 System.out.print("$ ");
                 String input = scanner.nextLine();
                 commandHandler.handleCommand(input);
@@ -27,6 +34,7 @@ class CommandHandler {
         commands.put("echo", new EchoCommand());
         commands.put("exit", new ExitCommand());
         commands.put("type", new TypeCommand(pathSearcher));
+        commands.put("pwd", new PwdCommand());
     }
 
     public void handleCommand(String input) {
@@ -54,7 +62,7 @@ class ExternalCommandExecutor {
             return;
         }
 
-        File executable = executableFiles.get(0); // Use the first found executable
+        // File executable = executableFiles.get(0); // Use the first found executable
         try {
             String[] commandWithArgs = new String[argList.length + 1];
             // commandWithArgs[0] = executable.getAbsolutePath();
@@ -62,13 +70,17 @@ class ExternalCommandExecutor {
             System.arraycopy(argList, 0, commandWithArgs, 1, argList.length);
 
             ProcessBuilder pb = new ProcessBuilder(commandWithArgs);
-            Process process = pb.start();
+            // Process process = pb.start();
 
-            try (Scanner outputScanner = new Scanner(process.getInputStream())) {
-                while (outputScanner.hasNextLine()) {
-                    System.out.println(outputScanner.nextLine());
-                }
-            }
+            // this is still the best way to capture output if needed as it provides access to streams for further processing and filtering. and no known issue of buffering and concurrency.
+            // try (Scanner outputScanner = new Scanner(process.getInputStream())) {
+            //     while (outputScanner.hasNextLine()) {
+            //         System.out.println(outputScanner.nextLine());
+            //     }
+            // }
+
+            pb.inheritIO();
+            Process process = pb.start();
 
             int exitCode = process.waitFor();
             if (exitCode != 0) {
@@ -118,6 +130,7 @@ class TypeCommand implements Command {
         BUILTIN_COMMANDS.add("echo");
         BUILTIN_COMMANDS.add("exit");
         BUILTIN_COMMANDS.add("type");
+        BUILTIN_COMMANDS.add("pwd");
     }
 
     public TypeCommand(PathSearcher pathSearcher) {
@@ -136,5 +149,12 @@ class TypeCommand implements Command {
                 System.out.println(arguments + " is " + executableFiles.get(0));
             }
         }
+    }
+}
+
+class PwdCommand implements Command {
+    @Override
+    public void execute(String arguments) {
+        System.out.println(System.getProperty("user.dir"));
     }
 }
