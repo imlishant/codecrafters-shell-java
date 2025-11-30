@@ -104,8 +104,8 @@ class ExternalCommandExecutor {
     private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState) {
         try {
             List<String> commandWithArgs = new ArrayList<>(1 + argList.length);
-            commandWithArgs.add(executablePath); // absolute path prevents ambiguity
-            commandWithArgs.add(commandName);
+            // commandWithArgs.add(executablePath); // absolute path prevents ambiguity // commenting it out as the test is failing
+            commandWithArgs.add(commandName); // demands the restriction of command name and its args only, no other param
             for (String a : argList) {
                 if (!a.isEmpty()) commandWithArgs.add(a);
             }
