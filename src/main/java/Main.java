@@ -57,7 +57,7 @@ class CommandHandler {
         commands.put("cd", new CdCommand(shellState));
     }
 
-    public String parse(String str) {
+    public String[] parse(String str) {
         List<String> args = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
         boolean inSingleQuote = false;
@@ -80,8 +80,8 @@ class CommandHandler {
         if (currentArg.length() > 0) {
             args.add(currentArg.toString());
         }
-        return String.join(" ", args);
-        // return args.toArray(new String[0]);
+        // return String.join(" ", args);
+        return args.toArray(new String[0]);
     }
 
     public void handleCommand(String input) {
@@ -93,16 +93,22 @@ class CommandHandler {
         // if there is any delimiter b/w any arglist then will be considered separate args
         // like single quoted string is considered one arg if its not concatenated with next
         //
-        String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
-        // String[] argList = arguments.isEmpty() ? new String[0] : parse(arguments);
-        String parsedArg = parse(arguments);
+        // String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
+        String[] parsedArgList = arguments.isEmpty() ? new String[0] : parse(arguments);
+        // String parsedArg = parse(arguments);
+
+        // aisa krte hain ki, we get the string list of the parsed args then other functions can 
+        // use however the fuck they want.
+        // if need to send param as string, we'd just join it using delimiter of single space " ".
+        // otherwise just send them the raw parse string array as list.
+        String parsedArg = String.join(" ", parsedArgList);
 
         Command command = commands.get(commandName);
         if (command != null) {
             // command.execute(arguments);
             command.execute(parsedArg);
         } else if (!commandName.isEmpty()) {
-            externalCommandExecutor.execute(commandName, argList, pathSearcher, shellState);
+            externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState);
         } else {
             System.out.println(commandName + ": command not found");
         }
