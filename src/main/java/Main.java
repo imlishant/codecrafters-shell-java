@@ -61,13 +61,16 @@ class CommandHandler {
         List<String> args = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
         boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
 
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
 
             if (c == '\'') {
                 inSingleQuote = !inSingleQuote;
-            } else if (Character.isWhitespace(c) && !inSingleQuote) {
+            } else if (c == '\"') {
+                inDoubleQuote = !inDoubleQuote;
+            } else if (Character.isWhitespace(c) && !inSingleQuote && !inDoubleQuote) {
                 if (currentArg.length() > 0) {
                     args.add(currentArg.toString());
                     currentArg.setLength(0);
