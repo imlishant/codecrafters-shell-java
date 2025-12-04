@@ -68,6 +68,9 @@ class CommandHandler {
 
             if (c == '\'') {
                 inSingleQuote = !inSingleQuote;
+                if (inDoubleQuote) {
+                    currentArg.append(c);
+                }
             } else if (c == '\"') {
                 inDoubleQuote = !inDoubleQuote;
             } else if (Character.isWhitespace(c) && !inSingleQuote && !inDoubleQuote) {
