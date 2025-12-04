@@ -57,15 +57,50 @@ class CommandHandler {
         commands.put("cd", new CdCommand(shellState));
     }
 
+    public String parse(String str) {
+        List<String> args = new ArrayList<>();
+        StringBuilder currentArg = new StringBuilder();
+        boolean inSingleQuote = false;
+
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+
+            if (c == '\'') {
+                inSingleQuote = !inSingleQuote;
+            } else if (Character.isWhitespace(c) && !inSingleQuote) {
+                if (currentArg.length() > 0) {
+                    args.add(currentArg.toString());
+                    currentArg.setLength(0);
+                }
+            } else {
+                currentArg.append(c);
+            }
+        }
+
+        if (currentArg.length() > 0) {
+            args.add(currentArg.toString());
+        }
+        return String.join(" ", args);
+        // return args.toArray(new String[0]);
+    }
+
     public void handleCommand(String input) {
+        // parse(input);
         String[] parts = input.split(" ", 2);
         String commandName = parts[0];
         String arguments = parts.length > 1 ? parts[1] : "";
+        // parse(arguments);
+        // if there is any delimiter b/w any arglist then will be considered separate args
+        // like single quoted string is considered one arg if its not concatenated with next
+        //
         String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
+        // String[] argList = arguments.isEmpty() ? new String[0] : parse(arguments);
+        String parsedArg = parse(arguments);
 
         Command command = commands.get(commandName);
         if (command != null) {
-            command.execute(arguments);
+            // command.execute(arguments);
+            command.execute(parsedArg);
         } else if (!commandName.isEmpty()) {
             externalCommandExecutor.execute(commandName, argList, pathSearcher, shellState);
         } else {
@@ -151,6 +186,7 @@ class PathSearcher {
 class EchoCommand implements Command {
     @Override
     public void execute(String arguments) {
+        // String[] parsedArgList = arguments.isEmpty() ? new String[0] : CommandHandler.parse(arguments);
         System.out.println(arguments);
     }
 }
