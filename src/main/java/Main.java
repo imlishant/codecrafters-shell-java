@@ -57,23 +57,51 @@ class CommandHandler {
         commands.put("cd", new CdCommand(shellState));
     }
 
-    public String[] parse(String str) {
+    public String[] parseDoubleQuote(String str) {
+        List<String> args = new ArrayList<>();
+        StringBuilder currentArg = new StringBuilder();
+        // boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+
+            if (c == '\"') {
+                inDoubleQuote = !inDoubleQuote;
+            } else if (Character.isWhitespace(c) && !inDoubleQuote) {
+                if (currentArg.length() > 0) {
+                    args.add(currentArg.toString());
+                    currentArg.setLength(0);
+                }
+            } else {
+                currentArg.append(c);
+            }
+        }
+
+        if (currentArg.length() > 0) {
+            args.add(currentArg.toString());
+        }
+        // return String.join(" ", args);
+        return args.toArray(new String[0]);
+    }
+
+    public String[] parseSingleQuote(String str) {
         List<String> args = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
         boolean inSingleQuote = false;
-        boolean inDoubleQuote = false;
+        // boolean inDoubleQuote = false;
 
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
 
             if (c == '\'') {
                 inSingleQuote = !inSingleQuote;
-                if (inDoubleQuote) {
-                    currentArg.append(c);
-                }
-            } else if (c == '\"') {
-                inDoubleQuote = !inDoubleQuote;
-            } else if (Character.isWhitespace(c) && !inSingleQuote && !inDoubleQuote) {
+                // if (inDoubleQuote) {
+                //     currentArg.append(c);
+                // }
+            // } else if (c == '\"') {
+            //     inDoubleQuote = !inDoubleQuote;
+            } else if (Character.isWhitespace(c) && !inSingleQuote) {
                 if (currentArg.length() > 0) {
                     args.add(currentArg.toString());
                     currentArg.setLength(0);
@@ -100,7 +128,8 @@ class CommandHandler {
         // like single quoted string is considered one arg if its not concatenated with next
         //
         // String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
-        String[] parsedArgList = arguments.isEmpty() ? new String[0] : parse(arguments);
+        // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parse(arguments);
+        String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseDoubleQuote(arguments);
         // String parsedArg = parse(arguments);
 
         // aisa krte hain ki, we get the string list of the parsed args then other functions can 
