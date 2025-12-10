@@ -60,7 +60,6 @@ class CommandHandler {
     public String[] parseDoubleQuote(String str) {
         List<String> args = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
-        // boolean inSingleQuote = false;
         boolean inDoubleQuote = false;
 
         for (int i = 0; i < str.length(); i++) {
@@ -89,18 +88,12 @@ class CommandHandler {
         List<String> args = new ArrayList<>();
         StringBuilder currentArg = new StringBuilder();
         boolean inSingleQuote = false;
-        // boolean inDoubleQuote = false;
 
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
 
             if (c == '\'') {
                 inSingleQuote = !inSingleQuote;
-                // if (inDoubleQuote) {
-                //     currentArg.append(c);
-                // }
-            // } else if (c == '\"') {
-            //     inDoubleQuote = !inDoubleQuote;
             } else if (Character.isWhitespace(c) && !inSingleQuote) {
                 if (currentArg.length() > 0) {
                     args.add(currentArg.toString());
@@ -118,6 +111,45 @@ class CommandHandler {
         return args.toArray(new String[0]);
     }
 
+    public String[] parseQuote(String str) {
+        List<String> args = new ArrayList<>();
+        StringBuilder currentArg = new StringBuilder();
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+
+            if (c == '\'') {
+                if (inDoubleQuote) {
+                    currentArg.append(c);
+                } else {
+                    inSingleQuote = !inSingleQuote;
+                }
+            } else if (c == '\"') {
+                if (inSingleQuote) {
+                    currentArg.append(c);
+                } else {
+                    inDoubleQuote = !inDoubleQuote;
+                }
+            } else if (Character.isWhitespace(c) && !inSingleQuote && !inDoubleQuote) {
+                if (currentArg.length() > 0) {
+                    args.add(currentArg.toString());
+                    currentArg.setLength(0);
+                }
+            } else {
+                currentArg.append(c);
+            }
+        }
+
+        if (currentArg.length() > 0) {
+            args.add(currentArg.toString());
+        }
+        // return String.join(" ", args);
+        return args.toArray(new String[0]);
+    }
+
+
     public void handleCommand(String input) {
         // parse(input);
         String[] parts = input.split(" ", 2);
@@ -129,7 +161,8 @@ class CommandHandler {
         //
         // String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parse(arguments);
-        String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseDoubleQuote(arguments);
+        // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseDoubleQuote(arguments);
+        String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseQuote(arguments);
         // String parsedArg = parse(arguments);
 
         // aisa krte hain ki, we get the string list of the parsed args then other functions can 
