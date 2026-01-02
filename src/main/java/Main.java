@@ -131,7 +131,8 @@ class CommandHandler {
                     inSingleQuote = !inSingleQuote;
                 }
             } else if (c == '\"') {
-                if (inSingleQuote) {
+                if ((inDoubleQuote && i > 0 && str.charAt(i - 1) == '\\') || inSingleQuote) {
+                // if (inSingleQuote) {
                     currentArg.append(c);
                 } else {
                     inDoubleQuote = !inDoubleQuote;
@@ -142,6 +143,9 @@ class CommandHandler {
                     currentArg.setLength(0);
                 }
             } else {
+                if ((inDoubleQuote) && c == '\\' && i > 0 && str.charAt(i - 1) != '\\') {
+                    continue;
+                }
                 currentArg.append(c);
             }
         }
