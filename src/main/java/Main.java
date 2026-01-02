@@ -120,7 +120,11 @@ class CommandHandler {
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
 
-            if (c == '\'') {
+            if (!inSingleQuote && !inDoubleQuote && c == '\\') { 
+                continue;
+            } else if (i > 0 && !inSingleQuote && !inDoubleQuote && str.charAt(i - 1) == '\\') {
+                currentArg.append(c);
+            } else if (c == '\'') {
                 if (inDoubleQuote) {
                     currentArg.append(c);
                 } else {
