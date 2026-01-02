@@ -120,33 +120,51 @@ class CommandHandler {
         for (int i = 0; i < str.length(); i++) {
             char c = str.charAt(i);
 
-            if (!inSingleQuote && !inDoubleQuote && c == '\\') { 
-                continue;
-            } else if (i > 0 && !inSingleQuote && !inDoubleQuote && str.charAt(i - 1) == '\\') {
-                currentArg.append(c);
-            } else if (c == '\'') {
-                if (inDoubleQuote) {
-                    currentArg.append(c);
+            if (inSingleQuote) {
+                if (c == '\'') {
+                    inSingleQuote = false;
                 } else {
-                    inSingleQuote = !inSingleQuote;
-                }
-            } else if (c == '\"') {
-                if ((inDoubleQuote && i > 0 && str.charAt(i - 1) == '\\' && currentArg.charAt(currentArg.length() - 1) != '\\' ) || inSingleQuote) {
-                // if (inSingleQuote) {
                     currentArg.append(c);
-                } else {
-                    inDoubleQuote = !inDoubleQuote;
                 }
-            } else if (Character.isWhitespace(c) && !inSingleQuote && !inDoubleQuote) {
-                if (currentArg.length() > 0) {
-                    args.add(currentArg.toString());
-                    currentArg.setLength(0);
+            } else if (inDoubleQuote) {
+                if (c == '\"') {
+                    inDoubleQuote = false;
+                } else if (c == '\\') {
+                    if (i + 1 < str.length()) {
+                        char next = str.charAt(i + 1);
+                        if (next == '\"' || next == '\\') {
+                            currentArg.append(next);
+                            i++;
+                            // continue;
+                        } else {
+                            currentArg.append(c);
+                        }
+                    } else {
+                        currentArg.append(c);
+                    }
+                } else {
+                    currentArg.append(c);
                 }
             } else {
-                if ((inDoubleQuote) && c == '\\' && i > 0 && str.charAt(i - 1) != '\\') {
-                    continue;
+                if (c == '\\') {
+                    if (i + 1 < str.length()) {
+                        char next = str.charAt(i + 1);
+                        currentArg.append(next);
+                        i++;
+                        continue;
+                    }
+                } else if (c == '\'') {
+                    inSingleQuote = true;
+                } else if (c == '\"') {
+                    inDoubleQuote = true;
+                } else if (Character.isWhitespace(c)) {
+                    if (currentArg.length() > 0) {
+                        args.add(currentArg.toString());
+                        currentArg.setLength(0);
+                    }
+                } else {
+                    currentArg.append(c);
                 }
-                currentArg.append(c);
             }
         }
 
