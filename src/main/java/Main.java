@@ -178,9 +178,16 @@ class CommandHandler {
 
     public void handleCommand(String input) {
         // parse(input);
-        String[] parts = input.split(" ", 2);
+        // String[] parts = input.split(" ", 2);
+        String[] parts = parseQuote(input); 
         String commandName = parts[0];
-        String arguments = parts.length > 1 ? parts[1] : "";
+        // String arguments = parts.length > 1 ? parts[1] : ""; // since new parse of input is implemented, its not needed anymore.
+        // except first arg, all other args are already parsed and to be considered. 
+        // so loop in args from 1 to n.
+        List<String> argList = new ArrayList<>();
+        for (int i = 1; i < parts.length; i++) {
+            argList.add(parts[i]);
+        }
         // parse(arguments);
         // if there is any delimiter b/w any arglist then will be considered separate args
         // like single quoted string is considered one arg if its not concatenated with next
@@ -188,7 +195,8 @@ class CommandHandler {
         // String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parse(arguments);
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseDoubleQuote(arguments);
-        String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseQuote(arguments);
+        // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseQuote(arguments);
+        String[] parsedArgList = argList.isEmpty() ? new String[0] : argList.toArray(new String[0]);
         // String parsedArg = parse(arguments);
 
         // aisa krte hain ki, we get the string list of the parsed args then other functions can 
