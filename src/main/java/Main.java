@@ -197,8 +197,8 @@ class CommandHandler {
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseDoubleQuote(arguments);
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseQuote(arguments);
         // String[] parsedArgList = argList.isEmpty() ? new String[0] : argList.toArray(new String[0]);
-        // String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1,, parts.length) : new String[0];
-        String[] parsedArgList = Arrays.stream(parts).skip(1).toArray(String[]::new);
+        String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
+        // String[] parsedArgList = Arrays.stream(parts).skip(1).toArray(String[]::new);
         // String parsedArg = parse(arguments);
 
         // aisa krte hain ki, we get the string list of the parsed args then other functions can 
