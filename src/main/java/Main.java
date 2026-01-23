@@ -270,6 +270,7 @@ class EchoCommand implements Command {
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : CommandHandler.parse(arguments);
         // System.out.println(arguments);
         writeOutput(arguments, redirectFile);
+    }
 }
 
 class ExitCommand implements Command {
