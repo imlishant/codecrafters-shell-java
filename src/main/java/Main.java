@@ -150,7 +150,7 @@ class CommandHandler {
     public void handleCommand(String input) {
         // parse(input);
         // String[] parts = input.split(" ", 2);
-        String[] parts = parseQuote(input); 
+        String[] parts = parseQuote(input);
         String commandName = parts[0];
 
         // String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
@@ -183,8 +183,22 @@ class CommandHandler {
 
         Command command = commands.get(commandName);
         if (command != null) {
-            // command.execute(arguments);
-            // command.execute(parsedArg);
+            // Ensure redirection files are created even if the command doesn't write to
+            // them
+            if (stdoutFile != null) {
+                try {
+                    new FileWriter(stdoutFile).close();
+                } catch (IOException e) {
+                    System.err.println("Error creating output file: " + e.getMessage());
+                }
+            }
+            if (stderrFile != null) {
+                try {
+                    new FileWriter(stderrFile).close();
+                } catch (IOException e) {
+                    System.err.println("Error creating error file: " + e.getMessage());
+                }
+            }
             command.execute(parsedArg, stdoutFile, stderrFile);
         } else if (!commandName.isEmpty()) {
             // externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState);
