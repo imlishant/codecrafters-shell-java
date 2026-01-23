@@ -1,4 +1,7 @@
 import java.io.File;
+import java.io.PrintStream;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.io.IOException;
 import java.util.*;
 
@@ -23,7 +26,24 @@ public class Main {
 }
 
 interface Command {
-    void execute(String arguments);
+    // void execute(String arguments); // default implementation where redirectFile is null or not necessary
+    void execute(String arguments, File redirectFile);
+
+    // default void execute(String arguments) {
+    //     execute(arguments, null);
+    // }
+
+    default void writeOutput(String content, File redirectFile) {
+        if (redirectFile != null) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(redirectFile))) {
+                writer.println(content);
+            } catch (IOException e) {
+                System.err.println("Error redirecting output: " + e.getMessage());
+            }
+        } else {
+            System.out.println(content);
+        }
+    }
 }
 
 // ShellState encapsulates mutable shell-wide state like the current working directory
@@ -55,60 +75,6 @@ class CommandHandler {
         commands.put("type", new TypeCommand(pathSearcher));
         commands.put("pwd", new PwdCommand(shellState));
         commands.put("cd", new CdCommand(shellState));
-    }
-
-    public String[] parseDoubleQuote(String str) {
-        List<String> args = new ArrayList<>();
-        StringBuilder currentArg = new StringBuilder();
-        boolean inDoubleQuote = false;
-
-        for (int i = 0; i < str.length(); i++) {
-            char c = str.charAt(i);
-
-            if (c == '\"') {
-                inDoubleQuote = !inDoubleQuote;
-            } else if (Character.isWhitespace(c) && !inDoubleQuote) {
-                if (currentArg.length() > 0) {
-                    args.add(currentArg.toString());
-                    currentArg.setLength(0);
-                }
-            } else {
-                currentArg.append(c);
-            }
-        }
-
-        if (currentArg.length() > 0) {
-            args.add(currentArg.toString());
-        }
-        // return String.join(" ", args);
-        return args.toArray(new String[0]);
-    }
-
-    public String[] parseSingleQuote(String str) {
-        List<String> args = new ArrayList<>();
-        StringBuilder currentArg = new StringBuilder();
-        boolean inSingleQuote = false;
-
-        for (int i = 0; i < str.length(); i++) {
-            char c = str.charAt(i);
-
-            if (c == '\'') {
-                inSingleQuote = !inSingleQuote;
-            } else if (Character.isWhitespace(c) && !inSingleQuote) {
-                if (currentArg.length() > 0) {
-                    args.add(currentArg.toString());
-                    currentArg.setLength(0);
-                }
-            } else {
-                currentArg.append(c);
-            }
-        }
-
-        if (currentArg.length() > 0) {
-            args.add(currentArg.toString());
-        }
-        // return String.join(" ", args);
-        return args.toArray(new String[0]);
     }
 
     public String[] parseQuote(String str) {
@@ -181,38 +147,36 @@ class CommandHandler {
         // String[] parts = input.split(" ", 2);
         String[] parts = parseQuote(input); 
         String commandName = parts[0];
-        // String arguments = parts.length > 1 ? parts[1] : ""; // since new parse of input is implemented, its not needed anymore.
-        // except first arg, all other args are already parsed and to be considered. 
-        // so loop in args from 1 to n.
-        List<String> argList = new ArrayList<>();
-        for (int i = 1; i < parts.length; i++) {
-            argList.add(parts[i]);
-        }
-        // parse(arguments);
-        // if there is any delimiter b/w any arglist then will be considered separate args
-        // like single quoted string is considered one arg if its not concatenated with next
-        //
-        // String[] argList = arguments.isEmpty() ? new String[0] : arguments.split(" ");
-        // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parse(arguments);
-        // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseDoubleQuote(arguments);
-        // String[] parsedArgList = arguments.isEmpty() ? new String[0] : parseQuote(arguments);
-        // String[] parsedArgList = argList.isEmpty() ? new String[0] : argList.toArray(new String[0]);
-        String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
-        // String[] parsedArgList = Arrays.stream(parts).skip(1).toArray(String[]::new);
-        // String parsedArg = parse(arguments);
 
-        // aisa krte hain ki, we get the string list of the parsed args then other functions can 
-        // use however the fuck they want.
-        // if need to send param as string, we'd just join it using delimiter of single space " ".
-        // otherwise just send them the raw parse string array as list.
+        // String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
+
+        List<String> argParam = new ArrayList<>();
+        File redirectFile = null;
+        for (int i = 0; i < parts.length; i++) {
+            if (parts[i].equals(">") || parts[i].equals("1>")) {
+                if (i+1 < parts.length) {
+                    redirectFile = new File(parts[i+1]);
+                    // break;
+                    i++;
+                }
+            } else {
+                argParam.add(parts[i]);
+            }
+        }
+
+        String[] cleanedParts = argParam.toArray(new String[0]);
+        String[] parsedArgList = cleanedParts.length > 1 ? Arrays.copyOfRange(cleanedParts, 1, cleanedParts.length) : new String[0];
+
         String parsedArg = String.join(" ", parsedArgList);
 
         Command command = commands.get(commandName);
         if (command != null) {
             // command.execute(arguments);
-            command.execute(parsedArg);
+            // command.execute(parsedArg);
+            command.execute(parsedArg, redirectFile);
         } else if (!commandName.isEmpty()) {
-            externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState);
+            // externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState);
+            externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState, redirectFile);
         } else {
             System.out.println(commandName + ": command not found");
         }
@@ -220,7 +184,7 @@ class CommandHandler {
 }
 
 class ExternalCommandExecutor {
-    public void execute(String commandName, String[] argList, PathSearcher pathSearcher, ShellState shellState) {
+    public void execute(String commandName, String[] argList, PathSearcher pathSearcher, ShellState shellState, File redirectFile) {
         // Support direct path execution if command contains a '/'
         if (commandName.contains(File.separator)) {
             File direct = new File(commandName);
@@ -228,7 +192,7 @@ class ExternalCommandExecutor {
                 direct = new File(shellState.getCurrentDirectory(), commandName);
             }
             if (direct.exists() && direct.canExecute() && direct.isFile()) {
-                runProcess(commandName,direct.getAbsolutePath(), argList, shellState);
+                runProcess(commandName,direct.getAbsolutePath(), argList, shellState, redirectFile);
                 return;
             } else {
                 System.out.println(commandName + ": command not found");
@@ -243,10 +207,10 @@ class ExternalCommandExecutor {
         }
 
         File executable = executableFiles.get(0); // Use the first found executable
-        runProcess(commandName, executable.getAbsolutePath(), argList, shellState);
+        runProcess(commandName, executable.getAbsolutePath(), argList, shellState, redirectFile);
     }
 
-    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState) {
+    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState, File redirectFile) {
         try {
             List<String> commandWithArgs = new ArrayList<>(1 + argList.length);
             // commandWithArgs.add(executablePath); // absolute path prevents ambiguity // commenting it out as the test is failing
@@ -258,7 +222,14 @@ class ExternalCommandExecutor {
             ProcessBuilder pb = new ProcessBuilder(commandWithArgs);
             // set working directory to current shell directory (emulated cd)
             pb.directory(shellState.getCurrentDirectory());
-            pb.redirectErrorStream(true); // merge stderr into stdout for now (simpler)
+            // pb.redirectErrorStream(true); // merge stderr into stdout for now (simpler)
+            pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+
+            if (redirectFile != null) {
+                pb.redirectOutput(ProcessBuilder.Redirect.to(redirectFile));
+            } else {
+                pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            }
 
             Process process = pb.start();
 
@@ -295,15 +266,15 @@ class PathSearcher {
 
 class EchoCommand implements Command {
     @Override
-    public void execute(String arguments) {
+    public void execute(String arguments, File redirectFile) {
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : CommandHandler.parse(arguments);
-        System.out.println(arguments);
-    }
+        // System.out.println(arguments);
+        writeOutput(arguments, redirectFile);
 }
 
 class ExitCommand implements Command {
     @Override
-    public void execute(String arguments) {
+    public void execute(String arguments, File redirectFile) {
         System.exit(0);
     }
 }
@@ -325,15 +296,18 @@ class TypeCommand implements Command {
     }
 
     @Override
-    public void execute(String arguments) {
+    public void execute(String arguments, File redirectFile) {
         if (BUILTIN_COMMANDS.contains(arguments)) {
-            System.out.println(arguments + " is a shell builtin");
+            // System.out.println(arguments + " is a shell builtin");
+            writeOutput(arguments + " is a shell builtin", redirectFile);
         } else {
             List<File> executableFiles = pathSearcher.search(arguments);
             if (executableFiles.isEmpty()) {
-                System.out.println(arguments + ": not found");
+                // System.out.println(arguments + ": not found");
+                writeOutput(arguments + ": not found", redirectFile);
             } else {
-                System.out.println(arguments + " is " + executableFiles.get(0));
+                // System.out.println(arguments + " is " + executableFiles.get(0));
+                writeOutput(arguments + " is " + executableFiles.get(0), redirectFile);
             }
         }
     }
@@ -343,9 +317,10 @@ class PwdCommand implements Command {
     private final ShellState shellState;
     PwdCommand(ShellState shellState) { this.shellState = shellState; }
     @Override
-    public void execute(String arguments) {
+    public void execute(String arguments, File redirectFile) {
         // Print emulated current directory (not System.getProperty once cd used)
-        System.out.println(shellState.getCurrentDirectory().getAbsolutePath());
+        // System.out.println(shellState.getCurrentDirectory().getAbsolutePath());
+        writeOutput(shellState.getCurrentDirectory().getAbsolutePath(), redirectFile);
     }
 }
 
@@ -354,7 +329,7 @@ class CdCommand implements Command {
     CdCommand(ShellState shellState) { this.shellState = shellState; }
 
     @Override
-    public void execute(String arguments) {
+    public void execute(String arguments, File redirectFile) {
         String targetRaw = arguments.trim();
         if (targetRaw.isEmpty()) {
             // No args -> HOME
@@ -364,6 +339,7 @@ class CdCommand implements Command {
                 return;
             }
             changeDirectory(new File(home), home);
+            // changeDirectory(new File(home), home, redirectFile);
             return;
         }
 
@@ -371,8 +347,10 @@ class CdCommand implements Command {
             String home = System.getenv("HOME");
             if (home != null) {
                 changeDirectory(new File(home), home);
+                // changeDirectory(new File(home), home, redirectFile);
             } else {
                 System.out.println("cd: ~: HOME not set");
+                // writeOutput("cd: ~: HOME not set", redirectFile);
             }
             return;
         }
@@ -390,14 +368,17 @@ class CdCommand implements Command {
         // these are later stages tasks
         if (!target.exists()) {
             System.out.println("cd: " + targetRaw + ": No such file or directory");
+            // writeOutput("cd: " + targetRaw + ": No such file or directory", redirectFile);
             return;
         }
         if (!target.isDirectory()) {
             System.out.println("cd: " + targetRaw + ": Not a directory");
+            // writeOutput("cd: " + targetRaw + ": Not a directory", redirectFile);
             return;
         }
         if (!target.canRead()) { // simplistic permission check
             System.out.println("cd: " + targetRaw + ": Permission denied");
+            // writeOutput("cd: " + targetRaw + ": Permission denied", redirectFile);
             return;
         }
 
@@ -410,6 +391,7 @@ class CdCommand implements Command {
             shellState.setCurrentDirectory(dir);
         } else {
             System.out.println("cd: " + display + ": Unable to change directory");
+            // writeOutput("cd: " + display + ": Unable to change directory", redirectFile);
         }
     }
 }
