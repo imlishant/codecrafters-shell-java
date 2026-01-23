@@ -215,13 +215,25 @@ class ExternalCommandExecutor {
 
         List<File> executableFiles = pathSearcher.search(commandName);
         if (executableFiles.isEmpty()) {
-            System.out.println(commandName + ": command not found");
-            // writestderrFile(commandName + ": command not found", stderrFile);
+            // System.out.println(commandName + ": command not found");
+            writestderrFile(commandName + ": command not found", stderrFile);
             return;
         }
 
         File executable = executableFiles.get(0); // Use the first found executable
         runProcess(commandName, executable.getAbsolutePath(), argList, shellState, stdoutFile, stderrFile);
+    }
+
+    private void writestderrFile(String content, File stderrFile) {
+        if (stderrFile != null) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(stderrFile))) {
+                writer.println(content);
+            } catch (IOException e) {
+                System.err.println("Error redirecting output: " + e.getMessage());
+            }
+        } else {
+            System.err.println(content);
+        }
     }
 
     private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState, File stdoutFile, File stderrFile) {
