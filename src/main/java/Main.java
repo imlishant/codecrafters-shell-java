@@ -46,7 +46,7 @@ interface Command {
                 System.err.println("Error redirecting output: " + e.getMessage());
             }
         } else {
-            System.err.println(content);
+            System.out.println(content);
         }
     }
 }
@@ -207,8 +207,8 @@ class ExternalCommandExecutor {
                 runProcess(commandName,direct.getAbsolutePath(), argList, shellState, stdoutFile, stderrFile);
                 return;
             } else {
-                System.out.println(commandName + ": command not found");
-                // writestderrFile(commandName + ": command not found", stderrFile);
+                // System.out.println(commandName + ": command not found");
+                writestderrFile(commandName + ": command not found", stderrFile);
                 return;
             }
         }
@@ -232,7 +232,7 @@ class ExternalCommandExecutor {
                 System.err.println("Error redirecting output: " + e.getMessage());
             }
         } else {
-            System.err.println(content);
+            System.out.println(content);
         }
     }
 
