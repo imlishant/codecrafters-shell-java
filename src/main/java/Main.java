@@ -7,16 +7,9 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
-        // System.out.println("curr dir: " + System.getProperty("user.dir"));
-        // System.out.println("curr abs path: " + new File(".").getAbsolutePath());
         CommandHandler commandHandler = new CommandHandler();
         try (Scanner scanner = new Scanner(System.in)) {
             while (true) {
-
-                // System.out.println("curr dir: " + System.getProperty("user.dir"));
-                // System.out.println("curr abs path: " + new File(".").getAbsolutePath());
-                // System.out.println("curr abs canonical path: " + new File(".").getCanonicalPath());
-
                 System.out.print("$ ");
                 String input = scanner.nextLine();
                 commandHandler.handleCommand(input);
@@ -26,22 +19,34 @@ public class Main {
 }
 
 interface Command {
-    // void execute(String arguments); // default implementation where redirectFile is null or not necessary
-    void execute(String arguments, File redirectFile);
+    // void execute(String arguments); // default implementation where stdoutFile is null or not necessary
+    void execute(String arguments, File stdoutFile, File stderrFile);
 
     // default void execute(String arguments) {
     //     execute(arguments, null);
     // }
 
-    default void writeOutput(String content, File redirectFile) {
-        if (redirectFile != null) {
-            try (PrintWriter writer = new PrintWriter(new FileWriter(redirectFile))) {
+    default void writestdoutFile(String content, File stdoutFile) {
+        if (stdoutFile != null) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(stdoutFile))) {
                 writer.println(content);
             } catch (IOException e) {
                 System.err.println("Error redirecting output: " + e.getMessage());
             }
         } else {
             System.out.println(content);
+        }
+    }
+
+    default void writestderrFile(String content, File stderrFile) {
+        if (stderrFile != null) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(stderrFile))) {
+                writer.println(content);
+            } catch (IOException e) {
+                System.err.println("Error redirecting output: " + e.getMessage());
+            }
+        } else {
+            System.err.println(content);
         }
     }
 }
@@ -151,12 +156,19 @@ class CommandHandler {
         // String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
 
         List<String> argParam = new ArrayList<>();
-        File redirectFile = null;
+        File stdoutFile = null;
+        File stderrFile = null;
+
         for (int i = 0; i < parts.length; i++) {
             if (parts[i].equals(">") || parts[i].equals("1>")) {
                 if (i+1 < parts.length) {
-                    redirectFile = new File(parts[i+1]);
+                    stdoutFile = new File(parts[i+1]);
                     // break;
+                    i++;
+                }
+            } else if (parts[i].equals("2>")) {
+                if (i+1 < parts.length) {
+                    stderrFile = new File(parts[i+1]);
                     i++;
                 }
             } else {
@@ -173,10 +185,10 @@ class CommandHandler {
         if (command != null) {
             // command.execute(arguments);
             // command.execute(parsedArg);
-            command.execute(parsedArg, redirectFile);
+            command.execute(parsedArg, stdoutFile, stderrFile);
         } else if (!commandName.isEmpty()) {
             // externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState);
-            externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState, redirectFile);
+            externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState, stdoutFile, stderrFile);
         } else {
             System.out.println(commandName + ": command not found");
         }
@@ -184,7 +196,7 @@ class CommandHandler {
 }
 
 class ExternalCommandExecutor {
-    public void execute(String commandName, String[] argList, PathSearcher pathSearcher, ShellState shellState, File redirectFile) {
+    public void execute(String commandName, String[] argList, PathSearcher pathSearcher, ShellState shellState, File stdoutFile, File stderrFile) {
         // Support direct path execution if command contains a '/'
         if (commandName.contains(File.separator)) {
             File direct = new File(commandName);
@@ -192,10 +204,11 @@ class ExternalCommandExecutor {
                 direct = new File(shellState.getCurrentDirectory(), commandName);
             }
             if (direct.exists() && direct.canExecute() && direct.isFile()) {
-                runProcess(commandName,direct.getAbsolutePath(), argList, shellState, redirectFile);
+                runProcess(commandName,direct.getAbsolutePath(), argList, shellState, stdoutFile, stderrFile);
                 return;
             } else {
                 System.out.println(commandName + ": command not found");
+                // writestderrFile(commandName + ": command not found", stderrFile);
                 return;
             }
         }
@@ -203,14 +216,15 @@ class ExternalCommandExecutor {
         List<File> executableFiles = pathSearcher.search(commandName);
         if (executableFiles.isEmpty()) {
             System.out.println(commandName + ": command not found");
+            // writestderrFile(commandName + ": command not found", stderrFile);
             return;
         }
 
         File executable = executableFiles.get(0); // Use the first found executable
-        runProcess(commandName, executable.getAbsolutePath(), argList, shellState, redirectFile);
+        runProcess(commandName, executable.getAbsolutePath(), argList, shellState, stdoutFile, stderrFile);
     }
 
-    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState, File redirectFile) {
+    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState, File stdoutFile, File stderrFile) {
         try {
             List<String> commandWithArgs = new ArrayList<>(1 + argList.length);
             // commandWithArgs.add(executablePath); // absolute path prevents ambiguity // commenting it out as the test is failing
@@ -225,8 +239,14 @@ class ExternalCommandExecutor {
             // pb.redirectErrorStream(true); // merge stderr into stdout for now (simpler)
             pb.redirectError(ProcessBuilder.Redirect.INHERIT);
 
-            if (redirectFile != null) {
-                pb.redirectOutput(ProcessBuilder.Redirect.to(redirectFile));
+            if (stderrFile != null) {
+                pb.redirectError(stderrFile);
+            } else {
+                pb.redirectError(ProcessBuilder.Redirect.INHERIT);
+            }
+
+            if (stdoutFile != null) {
+                pb.redirectOutput(ProcessBuilder.Redirect.to(stdoutFile));
             } else {
                 pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             }
@@ -266,16 +286,16 @@ class PathSearcher {
 
 class EchoCommand implements Command {
     @Override
-    public void execute(String arguments, File redirectFile) {
+    public void execute(String arguments, File stdoutFile, File stderrFile) {
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : CommandHandler.parse(arguments);
         // System.out.println(arguments);
-        writeOutput(arguments, redirectFile);
+        writestdoutFile(arguments, stdoutFile);
     }
 }
 
 class ExitCommand implements Command {
     @Override
-    public void execute(String arguments, File redirectFile) {
+    public void execute(String arguments, File stdoutFile, File stderrFile) {
         System.exit(0);
     }
 }
@@ -297,18 +317,19 @@ class TypeCommand implements Command {
     }
 
     @Override
-    public void execute(String arguments, File redirectFile) {
+    public void execute(String arguments, File stdoutFile, File stderrFile) {
         if (BUILTIN_COMMANDS.contains(arguments)) {
             // System.out.println(arguments + " is a shell builtin");
-            writeOutput(arguments + " is a shell builtin", redirectFile);
+            writestdoutFile(arguments + " is a shell builtin", stdoutFile);
         } else {
             List<File> executableFiles = pathSearcher.search(arguments);
             if (executableFiles.isEmpty()) {
                 // System.out.println(arguments + ": not found");
-                writeOutput(arguments + ": not found", redirectFile);
+                // writestdoutFile(arguments + ": not found", stdoutFile);
+                writestderrFile(arguments + ": not found", stderrFile);
             } else {
                 // System.out.println(arguments + " is " + executableFiles.get(0));
-                writeOutput(arguments + " is " + executableFiles.get(0), redirectFile);
+                writestdoutFile(arguments + " is " + executableFiles.get(0), stdoutFile);
             }
         }
     }
@@ -318,10 +339,10 @@ class PwdCommand implements Command {
     private final ShellState shellState;
     PwdCommand(ShellState shellState) { this.shellState = shellState; }
     @Override
-    public void execute(String arguments, File redirectFile) {
+    public void execute(String arguments, File stdoutFile, File stderrFile) {
         // Print emulated current directory (not System.getProperty once cd used)
         // System.out.println(shellState.getCurrentDirectory().getAbsolutePath());
-        writeOutput(shellState.getCurrentDirectory().getAbsolutePath(), redirectFile);
+        writestdoutFile(shellState.getCurrentDirectory().getAbsolutePath(), stdoutFile);
     }
 }
 
@@ -330,7 +351,7 @@ class CdCommand implements Command {
     CdCommand(ShellState shellState) { this.shellState = shellState; }
 
     @Override
-    public void execute(String arguments, File redirectFile) {
+    public void execute(String arguments, File stdoutFile, File stderrFile) {
         String targetRaw = arguments.trim();
         if (targetRaw.isEmpty()) {
             // No args -> HOME
@@ -340,7 +361,7 @@ class CdCommand implements Command {
                 return;
             }
             changeDirectory(new File(home), home);
-            // changeDirectory(new File(home), home, redirectFile);
+            // changeDirectory(new File(home), home, stdoutFile);
             return;
         }
 
@@ -348,10 +369,11 @@ class CdCommand implements Command {
             String home = System.getenv("HOME");
             if (home != null) {
                 changeDirectory(new File(home), home);
-                // changeDirectory(new File(home), home, redirectFile);
+                // changeDirectory(new File(home), home, stdoutFile);
             } else {
-                System.out.println("cd: ~: HOME not set");
-                // writeOutput("cd: ~: HOME not set", redirectFile);
+                // System.out.println("cd: ~: HOME not set");
+                // writestdoutFile("cd: ~: HOME not set", stdoutFile);
+                writestderrFile("cd: ~: HOME not set", stderrFile);
             }
             return;
         }
@@ -368,18 +390,21 @@ class CdCommand implements Command {
 
         // these are later stages tasks
         if (!target.exists()) {
-            System.out.println("cd: " + targetRaw + ": No such file or directory");
-            // writeOutput("cd: " + targetRaw + ": No such file or directory", redirectFile);
+            // System.out.println("cd: " + targetRaw + ": No such file or directory");
+            // writestdoutFile("cd: " + targetRaw + ": No such file or directory", stdoutFile);
+            writestderrFile("cd: " + targetRaw + ": No such file or directory", stderrFile);
             return;
         }
         if (!target.isDirectory()) {
-            System.out.println("cd: " + targetRaw + ": Not a directory");
-            // writeOutput("cd: " + targetRaw + ": Not a directory", redirectFile);
+            // System.out.println("cd: " + targetRaw + ": Not a directory");
+            // writestdoutFile("cd: " + targetRaw + ": Not a directory", stdoutFile);
+            writestderrFile("cd: " + targetRaw + ": Not a directory", stderrFile);
             return;
         }
         if (!target.canRead()) { // simplistic permission check
-            System.out.println("cd: " + targetRaw + ": Permission denied");
-            // writeOutput("cd: " + targetRaw + ": Permission denied", redirectFile);
+            // System.out.println("cd: " + targetRaw + ": Permission denied");
+            // writestdoutFile("cd: " + targetRaw + ": Permission denied", stdoutFile);
+            writestderrFile("cd: " + targetRaw + ": Permission denied", stderrFile);
             return;
         }
 
@@ -392,7 +417,7 @@ class CdCommand implements Command {
             shellState.setCurrentDirectory(dir);
         } else {
             System.out.println("cd: " + display + ": Unable to change directory");
-            // writeOutput("cd: " + display + ": Unable to change directory", redirectFile);
+            // writestdoutFile("cd: " + display + ": Unable to change directory", stdoutFile);
         }
     }
 }
