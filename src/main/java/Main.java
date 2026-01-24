@@ -18,17 +18,32 @@ public class Main {
     }
 }
 
+class RedirectionContext {
+    File stdoutFile;
+    boolean appendStdout;
+    File stderrFile;
+    boolean appendStderr;
+
+    RedirectionContext() {
+        this.stdoutFile = null;
+        this.appendStdout = false;
+        this.stderrFile = null;
+        this.appendStderr = false;
+    }
+}
+
 interface Command {
     // void execute(String arguments); // default implementation where stdoutFile is null or not necessary
-    void execute(String arguments, File stdoutFile, File stderrFile);
+    // void execute(String arguments, File stdoutFile, File stderrFile);
+    void execute(String arguments, RedirectionContext context);
 
     // default void execute(String arguments) {
     //     execute(arguments, null);
     // }
 
-    default void writestdoutFile(String content, File stdoutFile) {
-        if (stdoutFile != null) {
-            try (PrintWriter writer = new PrintWriter(new FileWriter(stdoutFile))) {
+    default void writestdoutFile(String content, RedirectionContext context) {
+        if (context.stdoutFile != null) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(context.stdoutFile, context.appendStdout))) {
                 writer.println(content);
             } catch (IOException e) {
                 System.err.println("Error redirecting output: " + e.getMessage());
@@ -38,9 +53,10 @@ interface Command {
         }
     }
 
-    default void writestderrFile(String content, File stderrFile) {
-        if (stderrFile != null) {
-            try (PrintWriter writer = new PrintWriter(new FileWriter(stderrFile))) {
+    // rigth now not needed but can be used later.
+    default void writestderrFile(String content, RedirectionContext context) {
+        if (context.stderrFile != null) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(context.stderrFile, context.appendStderr))) {
                 writer.println(content);
             } catch (IOException e) {
                 System.err.println("Error redirecting output: " + e.getMessage());
@@ -156,19 +172,29 @@ class CommandHandler {
         // String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
 
         List<String> argParam = new ArrayList<>();
-        File stdoutFile = null;
-        File stderrFile = null;
+        // File stdoutFile = null;
+        // File stderrFile = null;
+        // File appendStdoutFile;
+
+        // boolean append = false;
+
+        RedirectionContext context = new RedirectionContext();
 
         for (int i = 0; i < parts.length; i++) {
             if (parts[i].equals(">") || parts[i].equals("1>")) {
                 if (i+1 < parts.length) {
-                    stdoutFile = new File(parts[i+1]);
-                    // break;
+                    context.stdoutFile = new File(parts[i+1]);
                     i++;
                 }
             } else if (parts[i].equals("2>")) {
                 if (i+1 < parts.length) {
-                    stderrFile = new File(parts[i+1]);
+                    context.stderrFile = new File(parts[i+1]);
+                    i++;
+                }
+            } else if (parts[i].equals(">>") || parts[i].equals("1>>")) {
+                if (i+1 < parts.length) {
+                    context.stdoutFile = new File(parts[i+1]);
+                    context.appendStdout = true;
                     i++;
                 }
             } else {
@@ -185,24 +211,31 @@ class CommandHandler {
         if (command != null) {
             // Ensure redirection files are created even if the command doesn't write to
             // them
-            if (stdoutFile != null) {
+            if (context.stdoutFile != null) {
                 try {
-                    new FileWriter(stdoutFile).close();
+                    new FileWriter(context.stdoutFile, context.appendStdout).close();
                 } catch (IOException e) {
                     System.err.println("Error creating output file: " + e.getMessage());
                 }
             }
-            if (stderrFile != null) {
+            if (context.stderrFile != null) {
                 try {
-                    new FileWriter(stderrFile).close();
+                    new FileWriter(context.stderrFile, context.appendStderr).close();
                 } catch (IOException e) {
                     System.err.println("Error creating error file: " + e.getMessage());
                 }
             }
-            command.execute(parsedArg, stdoutFile, stderrFile);
+            // if (appendStdoutFile != null) {
+            //     try {
+            //         new FileWriter(appendStdoutFile, true).close();
+            //     } catch (IOException e) {
+            //         System.err.println("Error creating error file: " + e.getMessage());
+            //     }
+            // }
+            command.execute(parsedArg, context);
         } else if (!commandName.isEmpty()) {
             // externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState);
-            externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState, stdoutFile, stderrFile);
+            externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState, context);
         } else {
             System.out.println(commandName + ": command not found");
         }
@@ -210,7 +243,7 @@ class CommandHandler {
 }
 
 class ExternalCommandExecutor {
-    public void execute(String commandName, String[] argList, PathSearcher pathSearcher, ShellState shellState, File stdoutFile, File stderrFile) {
+    public void execute(String commandName, String[] argList, PathSearcher pathSearcher, ShellState shellState, RedirectionContext context) {
         // Support direct path execution if command contains a '/'
         if (commandName.contains(File.separator)) {
             File direct = new File(commandName);
@@ -218,7 +251,7 @@ class ExternalCommandExecutor {
                 direct = new File(shellState.getCurrentDirectory(), commandName);
             }
             if (direct.exists() && direct.canExecute() && direct.isFile()) {
-                runProcess(commandName,direct.getAbsolutePath(), argList, shellState, stdoutFile, stderrFile);
+                runProcess(commandName,direct.getAbsolutePath(), argList, shellState, context);
                 return;
             } else {
                 System.out.println(commandName + ": command not found");
@@ -229,13 +262,13 @@ class ExternalCommandExecutor {
 
         List<File> executableFiles = pathSearcher.search(commandName);
         if (executableFiles.isEmpty()) {
-            // System.out.println(commandName + ": command not found");
-            writestderrFile(commandName + ": command not found", stderrFile);
+            System.out.println(commandName + ": command not found");
+            // writestderrFile(commandName + ": command not found", stderrFile);
             return;
         }
 
         File executable = executableFiles.get(0); // Use the first found executable
-        runProcess(commandName, executable.getAbsolutePath(), argList, shellState, stdoutFile, stderrFile);
+        runProcess(commandName, executable.getAbsolutePath(), argList, shellState, context);
     }
 
     private void writestderrFile(String content, File stderrFile) {
@@ -250,7 +283,7 @@ class ExternalCommandExecutor {
         }
     }
 
-    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState, File stdoutFile, File stderrFile) {
+    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState, RedirectionContext context) {
         try {
             List<String> commandWithArgs = new ArrayList<>(1 + argList.length);
             // commandWithArgs.add(executablePath); // absolute path prevents ambiguity // commenting it out as the test is failing
@@ -265,14 +298,14 @@ class ExternalCommandExecutor {
             // pb.redirectErrorStream(true); // merge stderr into stdout for now (simpler)
             pb.redirectError(ProcessBuilder.Redirect.INHERIT);
 
-            if (stderrFile != null) {
-                pb.redirectError(stderrFile);
+            if (context.stderrFile != null) {
+                pb.redirectError(context.stderrFile);
             } else {
                 pb.redirectError(ProcessBuilder.Redirect.INHERIT);
             }
 
-            if (stdoutFile != null) {
-                pb.redirectOutput(ProcessBuilder.Redirect.to(stdoutFile));
+            if (context.stdoutFile != null) {
+                pb.redirectOutput(ProcessBuilder.Redirect.to(context.stdoutFile));
             } else {
                 pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
             }
@@ -312,16 +345,16 @@ class PathSearcher {
 
 class EchoCommand implements Command {
     @Override
-    public void execute(String arguments, File stdoutFile, File stderrFile) {
+    public void execute(String arguments, RedirectionContext context) {
         // String[] parsedArgList = arguments.isEmpty() ? new String[0] : CommandHandler.parse(arguments);
         // System.out.println(arguments);
-        writestdoutFile(arguments, stdoutFile);
+        writestdoutFile(arguments, context);
     }
 }
 
 class ExitCommand implements Command {
     @Override
-    public void execute(String arguments, File stdoutFile, File stderrFile) {
+    public void execute(String arguments, RedirectionContext context) {
         System.exit(0);
     }
 }
@@ -343,19 +376,19 @@ class TypeCommand implements Command {
     }
 
     @Override
-    public void execute(String arguments, File stdoutFile, File stderrFile) {
+    public void execute(String arguments, RedirectionContext context) {
         if (BUILTIN_COMMANDS.contains(arguments)) {
             // System.out.println(arguments + " is a shell builtin");
-            writestdoutFile(arguments + " is a shell builtin", stdoutFile);
+            writestdoutFile(arguments + " is a shell builtin", context);
         } else {
             List<File> executableFiles = pathSearcher.search(arguments);
             if (executableFiles.isEmpty()) {
                 // System.out.println(arguments + ": not found");
                 // writestdoutFile(arguments + ": not found", stdoutFile);
-                writestderrFile(arguments + ": not found", stderrFile);
+                writestderrFile(arguments + ": not found", context);
             } else {
                 // System.out.println(arguments + " is " + executableFiles.get(0));
-                writestdoutFile(arguments + " is " + executableFiles.get(0), stdoutFile);
+                writestdoutFile(arguments + " is " + executableFiles.get(0), context);
             }
         }
     }
@@ -365,10 +398,10 @@ class PwdCommand implements Command {
     private final ShellState shellState;
     PwdCommand(ShellState shellState) { this.shellState = shellState; }
     @Override
-    public void execute(String arguments, File stdoutFile, File stderrFile) {
+    public void execute(String arguments, RedirectionContext context) {
         // Print emulated current directory (not System.getProperty once cd used)
         // System.out.println(shellState.getCurrentDirectory().getAbsolutePath());
-        writestdoutFile(shellState.getCurrentDirectory().getAbsolutePath(), stdoutFile);
+        writestdoutFile(shellState.getCurrentDirectory().getAbsolutePath(), context);
     }
 }
 
@@ -377,7 +410,7 @@ class CdCommand implements Command {
     CdCommand(ShellState shellState) { this.shellState = shellState; }
 
     @Override
-    public void execute(String arguments, File stdoutFile, File stderrFile) {
+    public void execute(String arguments, RedirectionContext context) {
         String targetRaw = arguments.trim();
         if (targetRaw.isEmpty()) {
             // No args -> HOME
@@ -399,7 +432,7 @@ class CdCommand implements Command {
             } else {
                 // System.out.println("cd: ~: HOME not set");
                 // writestdoutFile("cd: ~: HOME not set", stdoutFile);
-                writestderrFile("cd: ~: HOME not set", stderrFile);
+                writestderrFile("cd: ~: HOME not set", context);
             }
             return;
         }
@@ -418,19 +451,19 @@ class CdCommand implements Command {
         if (!target.exists()) {
             // System.out.println("cd: " + targetRaw + ": No such file or directory");
             // writestdoutFile("cd: " + targetRaw + ": No such file or directory", stdoutFile);
-            writestderrFile("cd: " + targetRaw + ": No such file or directory", stderrFile);
+            writestderrFile("cd: " + targetRaw + ": No such file or directory", context);
             return;
         }
         if (!target.isDirectory()) {
             // System.out.println("cd: " + targetRaw + ": Not a directory");
             // writestdoutFile("cd: " + targetRaw + ": Not a directory", stdoutFile);
-            writestderrFile("cd: " + targetRaw + ": Not a directory", stderrFile);
+            writestderrFile("cd: " + targetRaw + ": Not a directory", context);
             return;
         }
         if (!target.canRead()) { // simplistic permission check
             // System.out.println("cd: " + targetRaw + ": Permission denied");
             // writestdoutFile("cd: " + targetRaw + ": Permission denied", stdoutFile);
-            writestderrFile("cd: " + targetRaw + ": Permission denied", stderrFile);
+            writestderrFile("cd: " + targetRaw + ": Permission denied", context);
             return;
         }
 
