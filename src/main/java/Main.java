@@ -33,12 +33,13 @@ class RedirectionContext {
 }
 
 interface Command {
-    // void execute(String arguments); // default implementation where stdoutFile is null or not necessary
+    // void execute(String arguments); // default implementation where stdoutFile is
+    // null or not necessary
     // void execute(String arguments, File stdoutFile, File stderrFile);
     void execute(String arguments, RedirectionContext context);
 
     // default void execute(String arguments) {
-    //     execute(arguments, null);
+    // execute(arguments, null);
     // }
 
     default void writestdoutFile(String content, RedirectionContext context) {
@@ -67,7 +68,8 @@ interface Command {
     }
 }
 
-// ShellState encapsulates mutable shell-wide state like the current working directory
+// ShellState encapsulates mutable shell-wide state like the current working
+// directory
 class ShellState {
     private File currentDirectory;
 
@@ -162,14 +164,14 @@ class CommandHandler {
         return args.toArray(new String[0]);
     }
 
-
     public void handleCommand(String input) {
         // parse(input);
         // String[] parts = input.split(" ", 2);
         String[] parts = parseQuote(input);
         String commandName = parts[0];
 
-        // String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
+        // String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1,
+        // parts.length) : new String[0];
 
         List<String> argParam = new ArrayList<>();
         // File stdoutFile = null;
@@ -182,18 +184,18 @@ class CommandHandler {
 
         for (int i = 0; i < parts.length; i++) {
             if (parts[i].equals(">") || parts[i].equals("1>")) {
-                if (i+1 < parts.length) {
-                    context.stdoutFile = new File(parts[i+1]);
+                if (i + 1 < parts.length) {
+                    context.stdoutFile = new File(parts[i + 1]);
                     i++;
                 }
             } else if (parts[i].equals("2>")) {
-                if (i+1 < parts.length) {
-                    context.stderrFile = new File(parts[i+1]);
+                if (i + 1 < parts.length) {
+                    context.stderrFile = new File(parts[i + 1]);
                     i++;
                 }
             } else if (parts[i].equals(">>") || parts[i].equals("1>>")) {
-                if (i+1 < parts.length) {
-                    context.stdoutFile = new File(parts[i+1]);
+                if (i + 1 < parts.length) {
+                    context.stdoutFile = new File(parts[i + 1]);
                     context.appendStdout = true;
                     i++;
                 }
@@ -203,7 +205,8 @@ class CommandHandler {
         }
 
         String[] cleanedParts = argParam.toArray(new String[0]);
-        String[] parsedArgList = cleanedParts.length > 1 ? Arrays.copyOfRange(cleanedParts, 1, cleanedParts.length) : new String[0];
+        String[] parsedArgList = cleanedParts.length > 1 ? Arrays.copyOfRange(cleanedParts, 1, cleanedParts.length)
+                : new String[0];
 
         String parsedArg = String.join(" ", parsedArgList);
 
@@ -226,15 +229,16 @@ class CommandHandler {
                 }
             }
             // if (appendStdoutFile != null) {
-            //     try {
-            //         new FileWriter(appendStdoutFile, true).close();
-            //     } catch (IOException e) {
-            //         System.err.println("Error creating error file: " + e.getMessage());
-            //     }
+            // try {
+            // new FileWriter(appendStdoutFile, true).close();
+            // } catch (IOException e) {
+            // System.err.println("Error creating error file: " + e.getMessage());
+            // }
             // }
             command.execute(parsedArg, context);
         } else if (!commandName.isEmpty()) {
-            // externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState);
+            // externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher,
+            // shellState);
             externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher, shellState, context);
         } else {
             System.out.println(commandName + ": command not found");
@@ -243,7 +247,8 @@ class CommandHandler {
 }
 
 class ExternalCommandExecutor {
-    public void execute(String commandName, String[] argList, PathSearcher pathSearcher, ShellState shellState, RedirectionContext context) {
+    public void execute(String commandName, String[] argList, PathSearcher pathSearcher, ShellState shellState,
+            RedirectionContext context) {
         // Support direct path execution if command contains a '/'
         if (commandName.contains(File.separator)) {
             File direct = new File(commandName);
@@ -251,7 +256,7 @@ class ExternalCommandExecutor {
                 direct = new File(shellState.getCurrentDirectory(), commandName);
             }
             if (direct.exists() && direct.canExecute() && direct.isFile()) {
-                runProcess(commandName,direct.getAbsolutePath(), argList, shellState, context);
+                runProcess(commandName, direct.getAbsolutePath(), argList, shellState, context);
                 return;
             } else {
                 System.out.println(commandName + ": command not found");
@@ -283,13 +288,17 @@ class ExternalCommandExecutor {
         }
     }
 
-    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState, RedirectionContext context) {
+    private void runProcess(String commandName, String executablePath, String[] argList, ShellState shellState,
+            RedirectionContext context) {
         try {
             List<String> commandWithArgs = new ArrayList<>(1 + argList.length);
-            // commandWithArgs.add(executablePath); // absolute path prevents ambiguity // commenting it out as the test is failing
-            commandWithArgs.add(commandName); // demands the restriction of command name and its args only, no other param
+            // commandWithArgs.add(executablePath); // absolute path prevents ambiguity //
+            // commenting it out as the test is failing
+            commandWithArgs.add(commandName); // demands the restriction of command name and its args only, no other
+                                              // param
             for (String a : argList) {
-                if (!a.isEmpty()) commandWithArgs.add(a);
+                if (!a.isEmpty())
+                    commandWithArgs.add(a);
             }
 
             ProcessBuilder pb = new ProcessBuilder(commandWithArgs);
@@ -298,16 +307,20 @@ class ExternalCommandExecutor {
             // pb.redirectErrorStream(true); // merge stderr into stdout for now (simpler)
             pb.redirectError(ProcessBuilder.Redirect.INHERIT);
 
-            if (context.stderrFile != null) {
-                pb.redirectError(context.stderrFile);
-            } else {
-                pb.redirectError(ProcessBuilder.Redirect.INHERIT);
-            }
-
             if (context.stdoutFile != null) {
-                pb.redirectOutput(ProcessBuilder.Redirect.to(context.stdoutFile));
+                // pb.redirectOutput(ProcessBuilder.Redirect.to(context.stdoutFile));
+                pb.redirectOutput(context.appendStdout ? ProcessBuilder.Redirect.appendTo(context.stdoutFile)
+                        : ProcessBuilder.Redirect.to(context.stdoutFile));
             } else {
                 pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            }
+
+            if (context.stderrFile != null) {
+                // pb.redirectError(context.stderrFile);
+                pb.redirectError(context.appendStderr ? ProcessBuilder.Redirect.appendTo(context.stderrFile)
+                        : ProcessBuilder.Redirect.to(context.stderrFile));
+            } else {
+                pb.redirectError(ProcessBuilder.Redirect.INHERIT);
             }
 
             Process process = pb.start();
@@ -346,7 +359,8 @@ class PathSearcher {
 class EchoCommand implements Command {
     @Override
     public void execute(String arguments, RedirectionContext context) {
-        // String[] parsedArgList = arguments.isEmpty() ? new String[0] : CommandHandler.parse(arguments);
+        // String[] parsedArgList = arguments.isEmpty() ? new String[0] :
+        // CommandHandler.parse(arguments);
         // System.out.println(arguments);
         writestdoutFile(arguments, context);
     }
@@ -396,7 +410,11 @@ class TypeCommand implements Command {
 
 class PwdCommand implements Command {
     private final ShellState shellState;
-    PwdCommand(ShellState shellState) { this.shellState = shellState; }
+
+    PwdCommand(ShellState shellState) {
+        this.shellState = shellState;
+    }
+
     @Override
     public void execute(String arguments, RedirectionContext context) {
         // Print emulated current directory (not System.getProperty once cd used)
@@ -407,7 +425,10 @@ class PwdCommand implements Command {
 
 class CdCommand implements Command {
     private final ShellState shellState;
-    CdCommand(ShellState shellState) { this.shellState = shellState; }
+
+    CdCommand(ShellState shellState) {
+        this.shellState = shellState;
+    }
 
     @Override
     public void execute(String arguments, RedirectionContext context) {
@@ -445,12 +466,14 @@ class CdCommand implements Command {
         // Normalize path (resolve .. and .)
         try {
             target = target.getCanonicalFile();
-        } catch (IOException ignored) { /* fallback to original */ }
+        } catch (IOException ignored) {
+            /* fallback to original */ }
 
         // these are later stages tasks
         if (!target.exists()) {
             // System.out.println("cd: " + targetRaw + ": No such file or directory");
-            // writestdoutFile("cd: " + targetRaw + ": No such file or directory", stdoutFile);
+            // writestdoutFile("cd: " + targetRaw + ": No such file or directory",
+            // stdoutFile);
             writestderrFile("cd: " + targetRaw + ": No such file or directory", context);
             return;
         }
@@ -476,7 +499,8 @@ class CdCommand implements Command {
             shellState.setCurrentDirectory(dir);
         } else {
             System.out.println("cd: " + display + ": Unable to change directory");
-            // writestdoutFile("cd: " + display + ": Unable to change directory", stdoutFile);
+            // writestdoutFile("cd: " + display + ": Unable to change directory",
+            // stdoutFile);
         }
     }
 }
