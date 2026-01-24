@@ -234,13 +234,6 @@ class CommandHandler {
                     System.err.println("Error creating error file: " + e.getMessage());
                 }
             }
-            // if (appendStdoutFile != null) {
-            // try {
-            // new FileWriter(appendStdoutFile, true).close();
-            // } catch (IOException e) {
-            // System.err.println("Error creating error file: " + e.getMessage());
-            // }
-            // }
             command.execute(parsedArg, context);
         } else if (!commandName.isEmpty()) {
             // externalCommandExecutor.execute(commandName, parsedArgList, pathSearcher,
