@@ -262,8 +262,8 @@ class ExternalCommandExecutor {
 
         List<File> executableFiles = pathSearcher.search(commandName);
         if (executableFiles.isEmpty()) {
-            System.out.println(commandName + ": command not found");
-            // writestderrFile(commandName + ": command not found", stderrFile);
+            // System.out.println(commandName + ": command not found");
+            writestderrFile(commandName + ": command not found", context);
             return;
         }
 
@@ -271,9 +271,9 @@ class ExternalCommandExecutor {
         runProcess(commandName, executable.getAbsolutePath(), argList, shellState, context);
     }
 
-    private void writestderrFile(String content, File stderrFile) {
-        if (stderrFile != null) {
-            try (PrintWriter writer = new PrintWriter(new FileWriter(stderrFile))) {
+    private void writestderrFile(String content, RedirectionContext context) {
+        if (context.stderrFile != null) {
+            try (PrintWriter writer = new PrintWriter(new FileWriter(context.stderrFile))) {
                 writer.println(content);
             } catch (IOException e) {
                 System.err.println("Error redirecting output: " + e.getMessage());
