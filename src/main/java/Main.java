@@ -199,6 +199,12 @@ class CommandHandler {
                     context.appendStdout = true;
                     i++;
                 }
+            } else if (parts[i].equals("2>>")) {
+                if (i + 1 < parts.length) {
+                    context.stderrFile = new File(parts[i + 1]);
+                    context.appendStderr = true;
+                    i++;
+                }
             } else {
                 argParam.add(parts[i]);
             }
