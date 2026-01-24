@@ -221,8 +221,8 @@ class ExternalCommandExecutor {
                 runProcess(commandName,direct.getAbsolutePath(), argList, shellState, stdoutFile, stderrFile);
                 return;
             } else {
-                // System.out.println(commandName + ": command not found");
-                writestderrFile(commandName + ": command not found", stderrFile);
+                System.out.println(commandName + ": command not found");
+                // writestderrFile(commandName + ": command not found", stderrFile);
                 return;
             }
         }
