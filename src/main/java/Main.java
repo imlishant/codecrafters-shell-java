@@ -61,7 +61,7 @@ public class Main {
             } catch (EndOfFileException e) {
                 break;
             }
-            System.out.println("DEBUG: RAW INPUT = |" + input + "|");
+            // System.out.println("DEBUG: RAW INPUT = |" + input + "|");
             commandHandler.handleCommand(input);
         }
     }
@@ -222,8 +222,8 @@ class CommandHandler {
         String[] parts = parseQuote(input);
         String commandName = parts[0];
 
-        System.out.println("DEBUG: parsed input = |" + input + "|");
-        System.out.println("DEBUG: parsed command = |" + commandName + "|");
+        // System.out.println("DEBUG: parsed input = |" + input + "|");
+        // System.out.println("DEBUG: parsed command = |" + commandName + "|");
 
         // String[] parsedArgList = parts.length > 1 ? Arrays.copyOfRange(parts, 1,
         // parts.length) : new String[0];
