@@ -29,7 +29,7 @@ class BuiltinCompleter implements Completer {
         String word = line.word();
         for (String builtin : builtins) {
             if (builtin.startsWith(word)) {
-                candidates.add(new Candidate(builtin));
+                candidates.add(new Candidate(builtin + " "));
             }
         }
     }
