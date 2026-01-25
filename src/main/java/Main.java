@@ -5,15 +5,54 @@ import java.io.PrintWriter;
 import java.io.IOException;
 import java.util.*;
 
-public class Main {
-    public static void main(String[] args) {
-        CommandHandler commandHandler = new CommandHandler();
-        try (Scanner scanner = new Scanner(System.in)) {
-            while (true) {
-                System.out.print("$ ");
-                String input = scanner.nextLine();
-                commandHandler.handleCommand(input);
+// engine - high level - logic layer
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.Completer;
+import org.jline.reader.Candidate;
+import org.jline.reader.ParsedLine;
+import org.jline.reader.UserInterruptException;
+import org.jline.reader.EndOfFileException;
+
+// metal - low level
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+
+class BuiltinCompleter implements Completer {
+    
+    @Override
+    public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        // builtins defined here 
+        // line.word();
+        // candidates.add(new Candidate("echo"));
+        List<String> builtins = Arrays.asList("echo", "exit");
+        String word = line.word();
+        for (String builtin : builtins) {
+            if (builtin.startsWith(word)) {
+                candidates.add(new Candidate(builtin));
             }
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        CommandHandler commandHandler = new CommandHandler();
+
+        Terminal terminal = TerminalBuilder.builder().build();
+        BuiltinCompleter completer = new BuiltinCompleter();
+        LineReader lineReader = LineReaderBuilder.builder().terminal(terminal).completer(completer).build();
+
+        while (true) {
+            String input = null;
+            try {
+                input = lineReader.readLine("$ ");
+            } catch (UserInterruptException e) {
+                continue;
+            } catch (EndOfFileException e) {
+                break;
+            }
+            commandHandler.handleCommand(input);
         }
     }
 }
