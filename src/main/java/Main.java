@@ -206,6 +206,9 @@ class CommandHandler {
     public void handleCommand(String input) {
         // parse(input);
         // String[] parts = input.split(" ", 2);
+        if (input.length() == 0) {
+            return;
+        }
         String[] parts = parseQuote(input);
         String commandName = parts[0];
 
